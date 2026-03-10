@@ -38,6 +38,62 @@
 html{scroll-behavior:smooth;}
 body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.6;display:flex;min-height:100vh;}
 
+/* ═══ LOGIN OVERLAY ═══ */
+#loginOverlay{
+  position:fixed;inset:0;z-index:9999;
+  background:linear-gradient(135deg,#1C4532 0%,#2D6A4F 50%,#1C4532 100%);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font);
+}
+#loginOverlay.hidden{display:none;}
+.login-box{
+  background:#fff;border-radius:20px;padding:48px 40px;width:100%;max-width:420px;
+  box-shadow:0 24px 64px rgba(0,0,0,0.25);
+  animation:loginFadeIn 0.5s ease;
+}
+@keyframes loginFadeIn{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
+.login-logo{
+  width:56px;height:56px;background:var(--yellow);border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;margin:0 auto 20px;
+}
+.login-title{text-align:center;font-size:22px;font-weight:800;color:var(--green);margin-bottom:4px;}
+.login-sub{text-align:center;font-size:13px;color:var(--muted);margin-bottom:32px;}
+.login-field{margin-bottom:18px;}
+.login-field label{display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;letter-spacing:0.04em;text-transform:uppercase;}
+.login-field input{
+  width:100%;padding:12px 16px;border:1.5px solid var(--border2);border-radius:10px;
+  font-size:14px;font-family:var(--font);color:var(--text);outline:none;
+  transition:border 0.2s,box-shadow 0.2s;background:#fafafa;
+}
+.login-field input:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(245,200,66,0.18);background:#fff;}
+.login-btn{
+  width:100%;padding:13px;background:var(--green);color:#fff;border:none;
+  border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;
+  font-family:var(--font);transition:background 0.2s,transform 0.1s;margin-top:4px;
+}
+.login-btn:hover{background:var(--green-mid);}
+.login-btn:active{transform:scale(0.98);}
+.login-error{
+  background:#FEE2E2;color:#DC2626;border-radius:8px;padding:10px 14px;
+  font-size:13px;font-weight:500;margin-bottom:16px;text-align:center;display:none;
+}
+.login-error.show{display:block;}
+.password-wrap{position:relative;}
+.password-wrap input{padding-right:44px;}
+.toggle-pw{
+  position:absolute;right:14px;top:50%;transform:translateY(-50%);
+  background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px;padding:0;
+}
+.login-footer{text-align:center;font-size:11px;color:var(--muted2);margin-top:24px;}
+.logout-btn{
+  background:none;border:1px solid var(--border2);border-radius:8px;
+  padding:6px 14px;font-size:12px;font-weight:600;color:var(--muted);
+  cursor:pointer;font-family:var(--font);transition:all 0.2s;
+}
+.logout-btn:hover{background:var(--red-light);color:var(--red);border-color:var(--red);}
+
+
 /* ═══ SCROLLBAR ═══ */
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-track{background:var(--bg);}
@@ -601,6 +657,30 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 </head>
 <body>
 
+<!-- ═══ LOGIN OVERLAY ═══ -->
+<div id="loginOverlay">
+  <div class="login-box">
+    <div class="login-logo">🔐</div>
+    <div class="login-title">Admin Access</div>
+    <div class="login-sub">Sign in to manage your portfolio</div>
+    <div class="login-error" id="loginError">❌ Invalid email or password</div>
+    <div class="login-field">
+      <label>Email</label>
+      <input type="email" id="loginEmail" placeholder="Enter your email" autocomplete="email"/>
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <div class="password-wrap">
+        <input type="password" id="loginPassword" placeholder="Enter your password" autocomplete="current-password"/>
+        <button class="toggle-pw" onclick="togglePassword()" type="button" title="Show/hide password">👁️</button>
+      </div>
+    </div>
+    <button class="login-btn" onclick="handleLogin()">Sign In →</button>
+    <div class="login-footer">Portfolio Admin Panel • Umang Jain</div>
+  </div>
+</div>
+
+
 <!-- Mobile hamburger -->
 <button class="mob-sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Toggle menu"><span></span><span></span><span></span></button>
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
@@ -613,6 +693,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
       <strong>Portfolio CMS</strong>
       <span>Umang Jain</span>
     </div>
+    <button class="logout-btn" onclick="handleLogout()" title="Logout">⬅ Exit</button>
   </div>
   <nav class="sidebar-nav">
     <div class="nav-label">Dashboard</div>
@@ -1704,6 +1785,56 @@ document.querySelectorAll('.nav-item').forEach(function(item) {
     if (window.innerWidth <= 768) closeSidebar();
   });
 });
+
+// ═══ LOGIN PROTECTION ═══
+(function() {
+  const SESSION_KEY = 'admin_auth_umang';
+  const CORRECT_EMAIL = 'umangjain0972@mail.com';
+  const CORRECT_PASS = 'Dev@102030';
+
+  function checkAuth() {
+    if (sessionStorage.getItem(SESSION_KEY) === 'true') {
+      document.getElementById('loginOverlay').classList.add('hidden');
+    }
+  }
+
+  window.handleLogin = function() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPassword').value;
+    const err = document.getElementById('loginError');
+    if (email === CORRECT_EMAIL && pass === CORRECT_PASS) {
+      sessionStorage.setItem(SESSION_KEY, 'true');
+      document.getElementById('loginOverlay').classList.add('hidden');
+      err.classList.remove('show');
+    } else {
+      err.classList.add('show');
+      document.getElementById('loginPassword').value = '';
+      document.getElementById('loginPassword').focus();
+    }
+  };
+
+  window.handleLogout = function() {
+    sessionStorage.removeItem(SESSION_KEY);
+    document.getElementById('loginEmail').value = '';
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('loginError').classList.remove('show');
+    document.getElementById('loginOverlay').classList.remove('hidden');
+  };
+
+  window.togglePassword = function() {
+    const inp = document.getElementById('loginPassword');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+  };
+
+  // Allow pressing Enter to login
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !document.getElementById('loginOverlay').classList.contains('hidden')) {
+      handleLogin();
+    }
+  });
+
+  checkAuth();
+})();
 
 </script>
 </body>
